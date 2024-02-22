@@ -9,51 +9,54 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    base_url=os.getenv("OPENAI_API_BASE"),
-)
-
 st.set_page_config(
-    page_title="Chat with the PDF",
-    page_icon="🦙",
+    page_title="Cover Letter Assistant",
+    page_icon="✒️",
     layout="centered",
     initial_sidebar_state="auto",
     menu_items=None,
 )
 
-st.title("Chat with the PDF")
+st.title("Cover Letter Assistant✒️🤖")
 
 if "messages" not in st.session_state.keys():  # Initialize the chat messages history
     st.session_state.messages = [
-        {"role": "assistant", "content": "Ask me a question about your document!"}
+        {"role": "assistant", "content": "Enter a job description to generate a cover letter!"}
     ]
 
-uploaded_file = st.file_uploader("Upload a file")
+uploaded_file = st.file_uploader("Upload your resume to get started", type=["pdf"])
 if uploaded_file:
     bytes_data = uploaded_file.read()
     with NamedTemporaryFile(delete=False) as tmp:  # open a named temporary file
         tmp.write(bytes_data)  # write data from the uploaded file into it
         with st.spinner(
-            text="Loading and indexing the Streamlit docs – hang tight! This should take 1-2 minutes."
+            text="Analyzing your resume – hang tight! This should take a moment."
         ):
-            '''can change it to 
-            1. read different file type, google llama xxxreader
-            2. read multiple files (file reader)'''
-            # Load the PDF
             reader = PDFReader()
-
-            # Extract the text from the PDF
             docs = reader.load_data(tmp.name)
-
-            # Initialize OpenAI client
             llm = OpenAI(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                base_url=os.getenv("OPENAI_API_BASE"),
                 model="gpt-3.5-turbo",
                 temperature=0.0,
-                system_prompt="You are an expert on the content of the document, provide detailed answers to the questions. Use the document to support your answers.",
+                system_prompt='''
+                You are an expert on writing cover letter.
+                Use the provided resume file and job description to craft a compelling letter that 
+                highlights relevant skills, experiences, and accomplishments. The cover letter should effectively 
+                communicate the candidate's suitability for the position and demonstrate a strong fit with the 
+                company's needs and values.
+                The cover letter should be about 250 to 400 words long, and should include the following sections:
+                1. Header - include Full Name, Phone Number, Email, Date, Name of the company I am applying to
+                2. Greeting the hiring manager - example: "Dear Hiring Manager,"
+                3. Introduction - start with introducing my name, experience, then talk about 2-3 of my top achievements
+                4. Body paragraph - Explain why I am the perfect candidate for the job
+                5. Third paragraph - Explain why I am a good match for the company
+                6. Closing paragraph
+                7. Letter ending and signature - example: "
+                Sincerely,
+                [Full Name]"
+                ''',
             )
-
-            # Create the index
             index = VectorStoreIndex.from_documents(docs)
     os.remove(tmp.name)  # remove temp file
 
